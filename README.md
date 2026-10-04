@@ -45,3 +45,5 @@ GitHub, Android Studio, Kotlin or Java, Canva, Google Play, and grocery store in
 | 9 | Presentation and demonstration |
 
 See CONTRIBUTING.md for how we work together.
+
+Repository maintained by John Carey, Jacob Gearity, Rylee Abbott, Matt Jones, and Joseph Bennett.
