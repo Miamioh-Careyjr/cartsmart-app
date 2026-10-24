@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools" package="com.example.name">
+    xmlns:tools="http://schemas.android.com/tools">
 
 
     <application
@@ -13,7 +13,7 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.ListingApp">
         <activity
-            android:name=".MainActivity"
+            android:name="com.example.listingapp.MainActivity"
             android:exported="true"
             android:theme="@style/Theme.ListingApp"
             android:windowSoftInputMode="adjustResize">
