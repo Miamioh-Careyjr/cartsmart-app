@@ -1,6 +1,5 @@
 package com.example.homescreenapp
 
-
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -24,11 +23,14 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledIconButton
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -41,8 +43,11 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.navigation.NavHostController
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
 import com.example.homescreenapp.ui.theme.HomeScreenAppTheme
-
 
 // ---- Palette ------------------------------------------------------------
 private val CartGreen = Color(0xFF278667)
@@ -51,6 +56,14 @@ private val CartBackground = Color(0xFFF5FAF7)
 private val CartBorder = Color(0xFF73AFC1)
 private val CartGray = Color(0xFF777777)
 
+// ---- Navigation ---------------------------------------------------------
+sealed class Screen(val route: String) {
+    data object Home : Screen("home")
+    data object PriceComparison : Screen("price_comparison")
+    data object Chat : Screen("chat")
+    data object Stores : Screen("stores")
+    data object Spending : Screen("spending")
+}
 
 // ---- Model --------------------------------------------------------------
 data class InfoSection(
@@ -58,9 +71,9 @@ data class InfoSection(
     val description: String,
     val button: String?,
     @DrawableRes val image: Int,
-    val imageFirst: Boolean
+    val imageFirst: Boolean,
+    val route: String? = null
 )
-
 
 // ---- Activity -----------------------------------------------------------
 class MainActivity : ComponentActivity() {
@@ -69,18 +82,43 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             HomeScreenAppTheme {
-                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    CartSmartScreen(modifier = Modifier.padding(innerPadding))
+                val navController = rememberNavController()
+                NavHost(
+                    navController = navController,
+                    startDestination = Screen.Home.route
+                ) {
+                    composable(Screen.Home.route) {
+                        Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
+                            CartSmartScreen(
+                                modifier = Modifier.padding(innerPadding),
+                                onNavigate = { route -> navController.navigate(route) }
+                            )
+                        }
+                    }
+                    composable(Screen.PriceComparison.route) {
+                        PlaceholderPage("Price comparison", navController)
+                    }
+                    composable(Screen.Chat.route) {
+                        PlaceholderPage("Chat", navController)
+                    }
+                    composable(Screen.Stores.route) {
+                        PlaceholderPage("Stores available", navController)
+                    }
+                    composable(Screen.Spending.route) {
+                        PlaceholderPage("Spending tracker", navController)
+                    }
                 }
             }
         }
     }
 }
 
-
 // ---- Screen -------------------------------------------------------------
 @Composable
-fun CartSmartScreen(modifier: Modifier = Modifier) {
+fun CartSmartScreen(
+    modifier: Modifier = Modifier,
+    onNavigate: (String) -> Unit = {}
+) {
     val sections = listOf(
         InfoSection(
             title = "Simplifying the grocery store experience",
@@ -88,7 +126,8 @@ fun CartSmartScreen(modifier: Modifier = Modifier) {
                     "and start the day great by making shopping decisions that make a difference.",
             button = "Price comparison",
             image = R.drawable.pricecomparison,
-            imageFirst = true
+            imageFirst = true,
+            route = Screen.PriceComparison.route
         ),
         InfoSection(
             title = "Connect and share with others",
@@ -96,7 +135,8 @@ fun CartSmartScreen(modifier: Modifier = Modifier) {
                     "and discover all new information to use with your grocery shopping.",
             button = "Chat",
             image = R.drawable.shopperchat,
-            imageFirst = false
+            imageFirst = false,
+            route = Screen.Chat.route
         ),
         InfoSection(
             title = "Discover a vast selection of stores available",
@@ -104,15 +144,17 @@ fun CartSmartScreen(modifier: Modifier = Modifier) {
                     "See what products are available and where before starting your shopping trip.",
             button = "Stores available",
             image = R.drawable.storeaisle,
-            imageFirst = true
+            imageFirst = true,
+            route = Screen.Stores.route
         ),
         InfoSection(
             title = "Keep track of how much you spend with CartSmart",
             description = "Monitor your purchases and understand how much you spend on grocery " +
                     "shopping today.",
-            button = null,
+            button = "Spending tracker",
             image = R.drawable.piggybank,
-            imageFirst = false
+            imageFirst = false,
+            route = Screen.Spending.route
         ),
         InfoSection(
             title = "Thank you so much for using CartSmart",
@@ -124,27 +166,25 @@ fun CartSmartScreen(modifier: Modifier = Modifier) {
         )
     )
 
-
     LazyColumn(
         modifier = modifier
             .fillMaxSize()
             .background(CartBackground),
         contentPadding = PaddingValues(bottom = 40.dp)
     ) {
-        item { HeroSection() }
+        item { HeroSection(onNavigate) }
         item { SectionHeading("PRICE COMPARISONS") }
-        items(sections) { section -> InfoRow(section) }
+        items(sections) { section -> InfoRow(section, onNavigate) }
         item { SectionHeading("CARTSMART FEATURES") }
-        item { FeatureSection() }
-        item { SavingSection() }
+        item { FeatureSection(onNavigate) }
+        item { SavingSection(onNavigate) }
         item { FooterSection() }
     }
 }
 
-
 // ---- Hero ---------------------------------------------------------------
 @Composable
-private fun HeroSection() {
+private fun HeroSection(onNavigate: (String) -> Unit) {
     Column(modifier = Modifier.padding(20.dp)) {
         Text(
             text = "CartSmart Grocery Savings",
@@ -153,9 +193,7 @@ private fun HeroSection() {
             fontWeight = FontWeight.Bold
         )
 
-
         Spacer(Modifier.height(20.dp))
-
 
         Image(
             painter = painterResource(R.drawable.groceryhero),
@@ -167,9 +205,7 @@ private fun HeroSection() {
                 .clip(RoundedCornerShape(14.dp))
         )
 
-
         Spacer(Modifier.height(24.dp))
-
 
         Text(
             text = "CartSmart:\ngrocery savings",
@@ -179,9 +215,7 @@ private fun HeroSection() {
             fontWeight = FontWeight.ExtraBold
         )
 
-
         Spacer(Modifier.height(10.dp))
-
 
         Text(
             text = "This app is designed to help shoppers save money " +
@@ -190,20 +224,17 @@ private fun HeroSection() {
             fontSize = 14.sp
         )
 
-
         Spacer(Modifier.height(18.dp))
 
-
         Button(
-            onClick = { /* Navigate to product search */ },
+            onClick = { onNavigate(Screen.PriceComparison.route) },
             colors = ButtonDefaults.buttonColors(containerColor = CartGray),
             shape = RoundedCornerShape(2.dp)
         ) {
             Text("Start searching")
         }
 
-
-        TextButton(onClick = { /* Open search */ }) {
+        TextButton(onClick = { onNavigate(Screen.PriceComparison.route) }) {
             Text(
                 text = "START SAVING NOW  →",
                 color = CartGreen,
@@ -212,7 +243,6 @@ private fun HeroSection() {
         }
     }
 }
-
 
 @Composable
 private fun SectionHeading(text: String) {
@@ -230,10 +260,9 @@ private fun SectionHeading(text: String) {
     )
 }
 
-
 // ---- Alternating image / text rows --------------------------------------
 @Composable
-private fun InfoRow(section: InfoSection) {
+private fun InfoRow(section: InfoSection, onNavigate: (String) -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -242,15 +271,14 @@ private fun InfoRow(section: InfoSection) {
         if (section.imageFirst) {
             SectionImage(section)
             Spacer(Modifier.height(12.dp))
-            SectionCard(section)
+            SectionCard(section, onNavigate)
         } else {
-            SectionCard(section)
+            SectionCard(section, onNavigate)
             Spacer(Modifier.height(12.dp))
             SectionImage(section)
         }
     }
 }
-
 
 @Composable
 private fun SectionImage(section: InfoSection) {
@@ -265,9 +293,8 @@ private fun SectionImage(section: InfoSection) {
     )
 }
 
-
 @Composable
-private fun SectionCard(section: InfoSection) {
+private fun SectionCard(section: InfoSection, onNavigate: (String) -> Unit) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(10.dp),
@@ -282,9 +309,7 @@ private fun SectionCard(section: InfoSection) {
                 fontWeight = FontWeight.Bold
             )
 
-
             Spacer(Modifier.height(10.dp))
-
 
             Text(
                 text = section.description,
@@ -293,13 +318,13 @@ private fun SectionCard(section: InfoSection) {
                 lineHeight = 20.sp
             )
 
-
-            section.button?.let { label ->
+            val label = section.button
+            val route = section.route
+            if (label != null && route != null) {
                 Spacer(Modifier.height(18.dp))
 
-
                 Button(
-                    onClick = { /* Handle action */ },
+                    onClick = { onNavigate(route) },
                     colors = ButtonDefaults.buttonColors(containerColor = CartGray),
                     shape = RoundedCornerShape(2.dp)
                 ) {
@@ -310,22 +335,29 @@ private fun SectionCard(section: InfoSection) {
     }
 }
 
-
 // ---- Green feature cards ------------------------------------------------
 @Composable
-private fun FeatureSection() {
+private fun FeatureSection(onNavigate: (String) -> Unit) {
     val features = listOf(
-        "Price Comparison" to
-                "Compare prices across different stores/locations to find the best deals and save money on everyday essentials.",
-        "Connect with Others" to
-                "Our chatting feature allows other shopping enthusiasts to interact with one another for information.",
-        "Store Selection" to
-                "Our store selection feature allows to view the stores we have available in our database for a look into the prices of nearby stores."
+        Triple(
+            "Price Comparison",
+            "Compare prices across different stores/locations to find the best deals and save money on everyday essentials.",
+            Screen.PriceComparison.route
+        ),
+        Triple(
+            "Connect with Others",
+            "Our chatting feature allows other shopping enthusiasts to interact with one another for information.",
+            Screen.Chat.route
+        ),
+        Triple(
+            "Store Selection",
+            "Our store selection feature allows to view the stores we have available in our database for a look into the prices of nearby stores.",
+            Screen.Stores.route
+        )
     )
 
-
     Column(modifier = Modifier.padding(horizontal = 20.dp)) {
-        features.forEach { (title, description) ->
+        features.forEach { (title, description, route) ->
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -344,9 +376,7 @@ private fun FeatureSection() {
                         textAlign = TextAlign.Center
                     )
 
-
                     Spacer(Modifier.height(28.dp))
-
 
                     Text(
                         text = description,
@@ -355,12 +385,10 @@ private fun FeatureSection() {
                         fontSize = 13.sp
                     )
 
-
                     Spacer(Modifier.height(18.dp))
 
-
                     FilledIconButton(
-                        onClick = { },
+                        onClick = { onNavigate(route) },
                         colors = IconButtonDefaults.filledIconButtonColors(
                             containerColor = Color.White.copy(alpha = 0.25f)
                         )
@@ -373,10 +401,9 @@ private fun FeatureSection() {
     }
 }
 
-
 // ---- Call-to-action + related sections ----------------------------------
 @Composable
-private fun SavingSection() {
+private fun SavingSection(onNavigate: (String) -> Unit) {
     Column(modifier = Modifier.padding(top = 30.dp)) {
         Image(
             painter = painterResource(R.drawable.freshfood),
@@ -386,7 +413,6 @@ private fun SavingSection() {
                 .fillMaxWidth()
                 .height(260.dp)
         )
-
 
         Column(
             modifier = Modifier.padding(20.dp),
@@ -400,24 +426,12 @@ private fun SavingSection() {
                 fontWeight = FontWeight.ExtraBold
             )
 
-
             Spacer(Modifier.height(20.dp))
 
-
-            ActionButton(
-                title = "Chat with other shoppers",
-                subtitle = "Interact with others"
-            )
-            ActionButton(
-                title = "Store selection",
-                subtitle = "See what is available"
-            )
-            ActionButton(
-                title = "Start comparing prices",
-                subtitle = "Compare now"
-            )
+            ActionButton("Chat with other shoppers", "Interact with others", Screen.Chat.route, onNavigate)
+            ActionButton("Store selection", "See what is available", Screen.Stores.route, onNavigate)
+            ActionButton("Start comparing prices", "Compare now", Screen.PriceComparison.route, onNavigate)
         }
-
 
         Text(
             text = "CartSmart's\nVarious Features",
@@ -428,14 +442,12 @@ private fun SavingSection() {
             modifier = Modifier.padding(horizontal = 20.dp)
         )
 
-
         Text(
             text = "Discuss with other shoppers, compare grocery prices, and find nearby stores " +
                     "that make grocery shopping that much easier.",
             color = CartDarkGreen,
             modifier = Modifier.padding(20.dp)
         )
-
 
         Image(
             painter = painterResource(R.drawable.phonemockup),
@@ -448,11 +460,15 @@ private fun SavingSection() {
     }
 }
 
-
 @Composable
-private fun ActionButton(title: String, subtitle: String) {
+private fun ActionButton(
+    title: String,
+    subtitle: String,
+    route: String,
+    onNavigate: (String) -> Unit
+) {
     Button(
-        onClick = { },
+        onClick = { onNavigate(route) },
         modifier = Modifier
             .fillMaxWidth()
             .padding(bottom = 8.dp),
@@ -471,7 +487,6 @@ private fun ActionButton(title: String, subtitle: String) {
     }
 }
 
-
 // ---- Footer -------------------------------------------------------------
 @Composable
 private fun FooterSection() {
@@ -482,9 +497,7 @@ private fun FooterSection() {
             fontWeight = FontWeight.Bold
         )
 
-
         Spacer(Modifier.height(14.dp))
-
 
         Text(
             text = "Achieve affordable and\nsatisfying prices today!",
@@ -494,9 +507,7 @@ private fun FooterSection() {
             fontWeight = FontWeight.ExtraBold
         )
 
-
         Spacer(Modifier.height(70.dp))
-
 
         Text(
             text = "GET IN TOUCH NOW!",
@@ -504,9 +515,7 @@ private fun FooterSection() {
             fontWeight = FontWeight.Bold
         )
 
-
         Spacer(Modifier.height(8.dp))
-
 
         Text(
             text = "Phone: 513-858-9655 \nEmail: contact@cartsmart.app\nSocial Media: @CartSmartApp",
@@ -516,12 +525,51 @@ private fun FooterSection() {
     }
 }
 
+// ---- Placeholder destination pages --------------------------------------
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun PlaceholderPage(title: String, navController: NavHostController) {
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text(title) },
+                navigationIcon = {
+                    IconButton(onClick = { navController.popBackStack() }) {
+                        Text("←", fontSize = 20.sp)
+                    }
+                }
+            )
+        }
+    ) { innerPadding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+                .background(CartBackground),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Text(
+                text = title,
+                color = CartGreen,
+                fontSize = 24.sp,
+                fontWeight = FontWeight.ExtraBold
+            )
+            Spacer(Modifier.height(10.dp))
+            Text(
+                text = "This page is ready for your content.",
+                color = CartDarkGreen,
+                fontSize = 14.sp
+            )
+        }
+    }
+}
 
 // ---- Preview ------------------------------------------------------------
 @Preview(showBackground = true)
 @Composable
 fun CartSmartPreview() {
     HomeScreenAppTheme {
-        CartSmartScreen()
+        CartSmartScreen(onNavigate = {})
     }
 }
